@@ -1,24 +1,25 @@
 //
-//  RMessageUITests.m
+//  ViewControllerTests.m
 //  RMessageUITests
 //
-//  Created by Adonis Peralta on 12/4/17.
+//  Created by Adonis Peralta on 3/14/18.
 //
 
 #import <XCTest/XCTest.h>
+#import "UITestHelpers.h"
 
 // Check for message y position to hundredths place
-static const int kMsgYPositionScale = 2;
+static int const kMsgYPositionScale = 2;
 
-@interface RMessageUITests : XCTestCase
+@interface ViewControllerTests : XCTestCase
 
 @end
 
-@implementation RMessageUITests {
+@implementation ViewControllerTests
+{
   XCUIApplication *app;
   XCUIElement *navBarElement;
   XCUIElement *windowElement;
-  CGRect navBarFrame;
   CGRect mainWindowFrame;
   NSPredicate *notHittablePredicate;
   NSPredicate *hittablePredicate;
@@ -32,35 +33,27 @@ static const int kMsgYPositionScale = 2;
   [app launch];
   navBarElement = app.navigationBars.element;
   windowElement = app.windows.element.firstMatch;
-  navBarFrame = navBarElement.frame;
   mainWindowFrame = windowElement.frame;
 
   notHittablePredicate = [NSPredicate predicateWithFormat:@"hittable == FALSE"];
   hittablePredicate = [NSPredicate predicateWithFormat:@"hittable == TRUE"];
 }
 
-// Returns true or false if the floats are equal to each other after truncating all numbers
-// after the scale decimal places
-BOOL validateFloatsToScale(CGFloat f1, CGFloat f2, int scale) {
-  int truncFactor = pow(10, scale);
-  CGFloat tFloat1 = truncf(f1 * truncFactor) / truncFactor;
-  CGFloat tFloat2 = truncf(f2 * truncFactor) / truncFactor;
-  return tFloat1 == tFloat2;
+- (CGFloat)springAnimationPaddingForHeight:(CGFloat)height
+{
+  return ceilf(height / 120) * -10.f;
 }
 
 - (void)showMessageFromTopByPressingButtonWithName:(NSString *)buttonName
-                                      hidingNavBar:(BOOL)hideNavBar
                                         timeToShow:(NSTimeInterval)displayTimeout
                                         timeToHide:(NSTimeInterval)dismissTimeout
 {
-  if (hideNavBar) {
-    [app.buttons[@"Toggle NavBar"] tap];
-  };
-
+  [app.buttons[@"Present Modal"] tap];
   [app.buttons[buttonName] tap];
   XCUIElement *displayedMessage = app.otherElements[@"RMessageView"];
 
-  CGFloat expectedMsgYPosition = hideNavBar ? 0 : navBarFrame.size.height + navBarFrame.origin.y;
+  CGFloat springAnimationPadding = [self springAnimationPaddingForHeight:displayedMessage.frame.size.height];
+  CGFloat expectedMsgYPosition = springAnimationPadding;
 
   BOOL messageDisplayed = [displayedMessage waitForExistenceWithTimeout:displayTimeout];
   XCTAssert(messageDisplayed, @"%@ message failed to display", buttonName);
@@ -75,18 +68,15 @@ BOOL validateFloatsToScale(CGFloat f1, CGFloat f2, int scale) {
   [self waitForExpectations:@[expectation] timeout:dismissTimeout];
 }
 
-- (void)showBottomMessageHidingNavBar:(BOOL)hideNavBar
-                           timeToShow:(NSTimeInterval)displayTimeout
+- (void)showBottomMessageWithTimeout:(NSTimeInterval)displayTimeout
                            timeToHide:(NSTimeInterval)dismissTimeout
 {
-  if (hideNavBar) {
-    [app.buttons[@"Toggle NavBar"] tap];
-  };
-
+  [app.buttons[@"Present Modal"] tap];
   [app.buttons[@"Bottom"] tap];
   XCUIElement *displayedMessage = app.otherElements[@"RMessageView"];
 
-  CGFloat expectedMsgYPosition = mainWindowFrame.size.height - displayedMessage.frame.size.height;
+  CGFloat springAnimationPadding = [self springAnimationPaddingForHeight:displayedMessage.frame.size.height];
+  CGFloat expectedMsgYPosition = mainWindowFrame.size.height - displayedMessage.frame.size.height - springAnimationPadding;
 
   BOOL messageDisplayed = [displayedMessage waitForExistenceWithTimeout:displayTimeout];
   XCTAssert(messageDisplayed, @"Bottom message failed to display");
@@ -101,145 +91,78 @@ BOOL validateFloatsToScale(CGFloat f1, CGFloat f2, int scale) {
   [self waitForExpectations:@[expectation] timeout:dismissTimeout];
 }
 
-- (void)showEndlessMessageHidingNavBar:(BOOL)hideNavBar timeToShow:(NSTimeInterval)displayTimeout
+- (void)showEndlessMessageWithTimeout:(NSTimeInterval)displayTimeout
 {
-  if (hideNavBar) {
-    [app.buttons[@"Toggle NavBar"] tap];
-  };
+  [app.buttons[@"Present Modal"] tap];
   [app.buttons[@"Endless"] tap];
   XCUIElement *displayedMessage = app.otherElements[@"RMessageView"];
 
-  int expectedMsgYPosition = hideNavBar ? 0 : navBarFrame.size.height + navBarFrame.origin.y;
+  CGFloat springAnimationPadding = [self springAnimationPaddingForHeight:displayedMessage.frame.size.height];
+  CGFloat expectedMsgYPosition = springAnimationPadding;
+
   BOOL messageDisplayed = [displayedMessage waitForExistenceWithTimeout:displayTimeout];
   XCTAssert(messageDisplayed, @"Endless message failed to display");
 
   BOOL expectedMessagePositionValid = validateFloatsToScale(displayedMessage.frame.origin.y,
-                                                           expectedMsgYPosition, kMsgYPositionScale);
+                                                            expectedMsgYPosition, kMsgYPositionScale);
   XCTAssert(expectedMessagePositionValid, "Endless message displayed in the wrong position");
   sleep(20);
   XCTAssert(displayedMessage.hittable, "Endless message no longer on screen");
 }
 
-- (void)testErrorMessageNoNavBar
+- (void)testErrorMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Error" hidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Error" timeToShow:3.f timeToHide:8.f];
 }
 
-- (void)testNormalMessageNoNavBar
+- (void)testNormalMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Message" hidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Message" timeToShow:3.f timeToHide:8.f];
 }
 
-- (void)testWarningMessageNoNavBar
+- (void)testWarningMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Warning" hidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Warning" timeToShow:3.f timeToHide:8.f];
 }
 
-- (void)testSuccessMessageNoNavBar
+- (void)testSuccessMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Success" hidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Success" timeToShow:3.f timeToHide:8.f];
 }
 
-- (void)testLongMessageNoNavBar
+- (void)testLongMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Text" hidingNavBar:YES timeToShow:3.f timeToHide:15.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Text" timeToShow:3.f timeToHide:17.f];
 }
 
-- (void)testButtonMessageNoNavBar
+- (void)testButtonMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Button" hidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Button" timeToShow:3.f timeToHide:8.f];
 }
 
-- (void)testBottomMessageNoNavBar
+- (void)testBottomMessage
 {
-  [self showBottomMessageHidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showBottomMessageWithTimeout:3.f timeToHide:8.f];
 }
 
-- (void)testCustomMessageNoNavBar
+- (void)testCustomMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Custom design" hidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Custom design" timeToShow:3.f timeToHide:8.f];
 }
 
-- (void)testImageMessageNoNavBar
+- (void)testImageMessage
 {
-  [self showMessageFromTopByPressingButtonWithName:@"Custom image" hidingNavBar:YES timeToShow:3.f timeToHide:5.f];
+  [self showMessageFromTopByPressingButtonWithName:@"Custom image" timeToShow:3.f timeToHide:8.f];
 }
 
-- (void)testEndlessMessageNoNavBar
+- (void)testEndlessMessage
 {
-  [self showEndlessMessageHidingNavBar:YES timeToShow:3.f];
-}
-
-- (void)testErrorMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Error" hidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testNormalMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Message" hidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testWarningMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Warning" hidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testSuccessMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Success" hidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testLongMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Text" hidingNavBar:NO timeToShow:3.f timeToHide:17.f];
-}
-
-- (void)testButtonMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Button" hidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testBottomMessageWithNavBar
-{
-  [self showBottomMessageHidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testCustomMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Custom design" hidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testImageMessageWithNavBar
-{
-  [self showMessageFromTopByPressingButtonWithName:@"Custom image" hidingNavBar:NO timeToShow:3.f timeToHide:5.f];
-}
-
-- (void)testEndlessMessageWithNavBar
-{
-  [self showEndlessMessageHidingNavBar:NO timeToShow:3.f];
-}
-
-- (void)testMessageOverNavBar
-{
-  [app.buttons[@"Over NavBar"] tap];
-  XCUIElement *displayedMessage = app.otherElements[@"RMessageView"];
-
-  BOOL messageDisplayed = [displayedMessage waitForExistenceWithTimeout:3.f];
-  XCTAssert(messageDisplayed, @"Over navBar message failed to display");
-
-  BOOL expectedMessagePositionValid = validateFloatsToScale(displayedMessage.frame.origin.y,
-                                                            0.f, kMsgYPositionScale);
-  XCTAssert(expectedMessagePositionValid, "Over navBar message displayed in the wrong position");
-
-  XCTestExpectation *expectation = [self expectationForPredicate:notHittablePredicate
-                                             evaluatedWithObject:displayedMessage
-                                                         handler:nil];
-  [self waitForExpectations:@[expectation] timeout:5.f];
+  [self showEndlessMessageWithTimeout:3.f];
 }
 
 - (void)testButtonMessageButtonPress
 {
+  [app.buttons[@"Present Modal"] tap];
   [app.buttons[@"Button"] tap];
   XCUIElement *displayedMessage = app.otherElements[@"RMessageView"];
 
@@ -264,11 +187,14 @@ BOOL validateFloatsToScale(CGFloat f1, CGFloat f2, int scale) {
 
 - (void)testEndlessMessageDismiss
 {
+  [app.buttons[@"Present Modal"] tap];
   [app.buttons[@"Endless"] tap];
 
   XCUIElement *displayedMessage = app.otherElements[@"RMessageView"];
 
-  int expectedMsgYPosition = navBarFrame.size.height + navBarFrame.origin.y;
+  CGFloat springAnimationPadding = [self springAnimationPaddingForHeight:displayedMessage.frame.size.height];
+  CGFloat expectedMsgYPosition = springAnimationPadding;
+
   BOOL messageDisplayed = [displayedMessage waitForExistenceWithTimeout:3.f];
   XCTAssert(messageDisplayed, @"Endless message failed to display");
 
@@ -292,10 +218,13 @@ BOOL validateFloatsToScale(CGFloat f1, CGFloat f2, int scale) {
 
 - (void)testTapToDismiss
 {
+  [app.buttons[@"Present Modal"] tap];
   [app.buttons[@"Error"] tap];
   XCUIElement *displayedMessage = app.otherElements[@"RMessageView"];
 
-  int expectedMsgYPosition = navBarFrame.size.height + navBarFrame.origin.y;
+  CGFloat springAnimationPadding = [self springAnimationPaddingForHeight:displayedMessage.frame.size.height];
+  CGFloat expectedMsgYPosition = springAnimationPadding;
+
   BOOL messageDisplayed = [displayedMessage waitForExistenceWithTimeout:3.f];
   XCTAssert(messageDisplayed, @"Error message failed to display");
 

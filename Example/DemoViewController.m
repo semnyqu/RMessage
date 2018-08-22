@@ -24,6 +24,12 @@
   //[[RMessageView appearance] setTitleSubtitleLabelsSizeToFit:YES];
 }
 
+// Uncomment to test hidden status bar functionality
+//- (BOOL)prefersStatusBarHidden
+//{
+//  return YES;
+//}
+
 - (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator
 {
   [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
@@ -257,6 +263,11 @@
 - (IBAction)didTapNavbarHidden:(id)sender
 {
   self.navigationController.navigationBarHidden = !self.navigationController.navigationBarHidden;
+}
+
+- (IBAction)didTapTimedMessage:(id)sender
+{
+  [self performSelector:@selector(didTapMessage:) withObject:nil afterDelay:3.0];
 }
 
 /*- (CGFloat)customVerticalOffsetForMessageView:(RMessageView *)messageView
